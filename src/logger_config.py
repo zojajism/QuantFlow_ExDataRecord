@@ -1,3 +1,4 @@
+import json
 import logging
 from logging.handlers import TimedRotatingFileHandler
 from dotenv import load_dotenv
@@ -39,5 +40,11 @@ def setup_logger():
     )
 
     logger = logging.getLogger("QuantFlow_DataCollector")
-    logger.info("Logger initialized (Dev Mode)" if is_dev else "Logger initialized (Production Mode)")
+    logger.info(
+                json.dumps({
+                        "EventCode": 0,
+                        "Message": f"Logger initialized (Dev Mode)" if is_dev else "Logger initialized (Production Mode)"
+                    })
+            )
+    
     return logger
