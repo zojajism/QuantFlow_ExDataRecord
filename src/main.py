@@ -7,6 +7,8 @@ import os
 from logger_config import setup_logger
 from db_writer_pg import insert_candles_to_db_async, insert_tickers_to_db_async
 from db_writer_pg import get_pg_pool
+from NATS_setup import ensure_streams_from_yaml
+from alert_manager import send_alert
 
 Candle_SUBJECT = "candles.>"   
 Candle_STREAM = "STREAM_CANDLES"   
@@ -24,13 +26,19 @@ async def main():
                         "Message": f"Starting QuantFlow_ExDataRecorder system..."
                     })
             )
-    db_pool = await get_pg_pool()
 
     nc = NATS()
     await nc.connect(os.getenv("NATS_URL"), user=os.getenv("NATS_USER"), password=os.getenv("NATS_PASS"))
-    
-    js = nc.jetstream()
+    await ensure_streams_from_yaml(nc, "streams.yaml")
  
+    js = nc.jetstream()
+
+    try:
+        db_pool = await get_pg_pool()
+    except Exception as e:
+        await send_alert("DBConnectionError", str(e))
+        raise
+
     # --- Consumer 1: Tick DB Writer (receives ALL messages independently)
     try:
         await js.delete_consumer(Tick_STREAM, "tick-db-writer")
@@ -94,6 +102,7 @@ async def main():
                                 "Message": f"NATS error: Tick, {e}"
                             })
                     )
+                await send_alert("NATS-Error-Tick", str(e))                
                 await asyncio.sleep(0.05)
    
 
@@ -119,6 +128,7 @@ async def main():
                                 "Message": f"NATS error: Candle, {e}"
                             })
                     )
+                await send_alert("NATS-Error-Candle", str(e))                
                 await asyncio.sleep(0.05)
     
     logger.info(
@@ -127,8 +137,8 @@ async def main():
                          "Message": f"Subscriber starts...."
                     })
             )
-       
-    
+   
+   
     await asyncio.gather(tick_db_worker(), candle_db_worker())
     
     
