@@ -7,7 +7,7 @@ import traceback
 from dotenv import load_dotenv
 from tenacity import retry, stop_after_attempt, wait_fixed, retry_if_exception_type
 import asyncpg
-from alert_manager import send_alert
+from telegram_notifier import notify_telegram, ChatType, start_telegram_notifier, close_telegram_notifier, ChatType
 
 logger = logging.getLogger(__name__)
 load_dotenv()
@@ -157,9 +157,7 @@ async def insert_tickers_to_db_async(pool: asyncpg.Pool, ticker_data: dict):
             "EventCode": -1,
             "Message": f"Error inserting ticker data: {ticker_data} | Exception: {str(e)}\n{traceback.format_exc()}"
         }))
-        
-        await send_alert("DBWriterApp-Ticker", str(e))
-        
+        notify_telegram(f"⛔️ DBWriterApp-Ticker \n" + str(e), ChatType.ALERT) 
 
 async def insert_candles_to_db_async(candle_data: dict):
     """
@@ -217,9 +215,8 @@ async def insert_candles_to_db_async(candle_data: dict):
             "Message": f"Error inserting candle data: {candle_data} | Exception: {str(e)}\n{traceback.format_exc()}"
         }))
         
-        await send_alert("DBWriterApp-Candle", str(e))
-        
-
+        notify_telegram(f"⛔️ DBWriterApp-Candle \n" + str(e), ChatType.ALERT) 
+       
 # ---------- OPTIONAL: batch helpers ----------
 async def insert_candles_batch_async(candles: list[dict]):
     """
