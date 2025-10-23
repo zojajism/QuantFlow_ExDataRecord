@@ -19,16 +19,17 @@ Tick_STREAM  = "STREAM_TICKS"
 
 async def main():
     
-    await start_telegram_notifier()
+
     try:
         logger = setup_logger()
-        logger.info("Starting QuantFlow_ExDataRecorder system...")
         logger.info(
                     json.dumps({
                             "EventCode": 0,
                             "Message": f"Starting QuantFlow_ExDataRecorder system..."
                         })
                 )
+
+        await start_telegram_notifier()
         notify_telegram(f"❇️ Data Writer App started....", ChatType.ALERT)
        
         nc = NATS()

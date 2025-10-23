@@ -1,23 +1,28 @@
-import json
-import logging
+# logger_config.py
+import json, logging, os
+from pathlib import Path
 from logging.handlers import TimedRotatingFileHandler
 from dotenv import load_dotenv
-import os
-
-
 
 def setup_logger():
-
+   
     load_dotenv()
     is_dev = os.getenv("IS_DEV")
     if is_dev == None:
         is_dev = False
 
+    log_dir = Path("/data/logs")
+    if not log_dir.exists():
+        log_dir = Path(__file__).resolve().parent / "data" / "logs"  # <- your local folder name
+
+    log_dir.mkdir(parents=True, exist_ok=True)
+    log_file = log_dir / "quantflow_DataWriter.log"
+
     file_handler = TimedRotatingFileHandler(
-        "quantflow_DataWriter.log",
-        when="midnight",   
+        str(log_file),
+        when="midnight",
         interval=1,
-        backupCount=7,     
+        backupCount=7,
         encoding="utf-8"
     )
     formatter = logging.Formatter(
@@ -39,12 +44,11 @@ def setup_logger():
         handlers=handlers
     )
 
-    logger = logging.getLogger("QuantFlow_DataWriter")
+    logger = logging.getLogger("quantflow_DataWriter")
     logger.info(
                 json.dumps({
                         "EventCode": 0,
                         "Message": f"Logger initialized (Dev Mode)" if is_dev else "Logger initialized (Production Mode)"
                     })
             )
-    
     return logger
