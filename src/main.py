@@ -3,13 +3,14 @@ from datetime import datetime
 import json
 from nats.aio.client import Client as NATS
 from nats.js import api
-import os
 from logger_config import setup_logger
 from db_writer_pg import insert_candles_to_db_async, insert_tickers_to_db_async
 from db_writer_pg import get_pg_pool
 from NATS_setup import ensure_streams_from_yaml
 from telegram_notifier import notify_telegram, ChatType, start_telegram_notifier, close_telegram_notifier, ChatType
-
+import os
+from pathlib import Path
+from dotenv import load_dotenv
 
 Candle_SUBJECT = "candles.>"   
 Candle_STREAM = "STREAM_CANDLES"   
@@ -21,6 +22,15 @@ async def main():
     
 
     try:
+
+        # Try the Docker volume location first
+        env_path = Path("/data/.env")
+        # Fallback for local dev
+        if not env_path.exists():
+            env_path = Path(__file__).resolve().parent / "data" / ".env"
+        load_dotenv(dotenv_path=env_path)
+
+
         logger = setup_logger()
         logger.info(
                     json.dumps({
