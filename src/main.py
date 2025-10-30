@@ -18,6 +18,9 @@ Candle_STREAM = "STREAM_CANDLES"
 Tick_SUBJECT = "ticks.>"   
 Tick_STREAM  = "STREAM_TICKS"              
 
+Tick_DURABLE_NAME = 'tick-db-writer'
+Candle_DURABLE_NAME = 'candle-db-writer'
+
 async def main():
     
 
@@ -56,14 +59,14 @@ async def main():
 
         # --- Consumer 1: Tick Engine (receives NEW messages)
         try:
-            await js.delete_consumer(Tick_STREAM, "tick-quant-engine")
+            await js.delete_consumer(Tick_STREAM, Tick_DURABLE_NAME)
         except Exception:
             pass
         
         await js.add_consumer(
             Tick_STREAM,
             api.ConsumerConfig(
-                durable_name="tick-quant-engine",
+                durable_name=Tick_DURABLE_NAME,
                 filter_subject=Tick_SUBJECT,
                 ack_policy=api.AckPolicy.EXPLICIT,
                 deliver_policy=api.DeliverPolicy.NEW,  
@@ -73,14 +76,14 @@ async def main():
 
         # --- Consumer 2: Candle Engine (also receives NEW messages)
         try:
-            await js.delete_consumer(Candle_STREAM, "candle-quant-engine")
+            await js.delete_consumer(Candle_STREAM, Candle_DURABLE_NAME)
         except Exception:
             pass    
 
         await js.add_consumer(
             Candle_STREAM,
             api.ConsumerConfig(
-                durable_name="candle-quant-engine",
+                durable_name=Candle_DURABLE_NAME,
                 filter_subject=Candle_SUBJECT,
                 ack_policy=api.AckPolicy.EXPLICIT,
                 deliver_policy=api.DeliverPolicy.NEW, 
@@ -90,10 +93,10 @@ async def main():
 
 
         # Pull-based subscription for Tick Engine
-        sub_Tick = await js.pull_subscribe(Tick_SUBJECT, durable="tick-quant-engine")
+        sub_Tick = await js.pull_subscribe(Tick_SUBJECT, durable=Tick_DURABLE_NAME)
     
         # Pull-based subscription for Candle Engine 
-        sub_Candle = await js.pull_subscribe(Candle_SUBJECT, durable="candle-quant-engine")
+        sub_Candle = await js.pull_subscribe(Candle_SUBJECT, durable=Candle_DURABLE_NAME)
 
 
         async def tick_engine_worker():
@@ -149,7 +152,7 @@ async def main():
         logger.info(
                 json.dumps({
                             "EventCode": 0,
-                            "Message": f"Subscriber Quant Engine starts...."
+                            "Message": f"Subscriber QuantFlow_ExDataRecorder starts...."
                         })
                 )
     
@@ -157,7 +160,7 @@ async def main():
         await asyncio.gather(tick_engine_worker(), candle_engine_worker())
         
     finally:
-        notify_telegram(f"⛔️ Data Writer App stopped.", ChatType.ALERT)
+        notify_telegram(f"⛔️ QuantFlow_ExDataRecorder App stopped.", ChatType.ALERT)
         await close_telegram_notifier()
 
 if __name__ == "__main__":
